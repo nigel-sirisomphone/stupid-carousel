@@ -3,7 +3,7 @@
  * ==============================================================
  * @author Nigel Sirisomphone
  * @date 17/10/2013
- *
+ * @version 1.0.2
  * ==============================================================
  * Flyweight carousel plugin. This has a few simple
  * methods that handle navigation of the carousel.
@@ -37,13 +37,20 @@
 
     // get wrapper width
     this.frameWidth = (this.$items.first().outerWidth() + opts.itemGutter) * opts.visibleItems;
-    this._countFrames();
+    this._setLength();
 
     // wrap elements in div
     this._initWrappers();
-    this._setPanelDimension();
+    this._setWrapperDimensions();
+
+    this._appendNavigationEls();
+    this._bindNavigationElClick()
   }
 
+
+  /*===================================================
+    Initiators
+  ==================================================*/
   miniCarousel.prototype._initItems = function () {
     this.$items = this.$element.find(opts.itemSelector);
 
@@ -68,38 +75,34 @@
 
     this.$wrapper.css({
       position: 'relative'
-    , height: this.$items.first().height()
+    , height: this.$panel.children().first().height()
     });
 
     this.$panel.css('position', 'absolute');
   }
 
-  miniCarousel.prototype._setPanelDimension = function () {
+  miniCarousel.prototype._appendNavigationEls = function () {
+    this.$element.append(
+        $('<a href="javascript:">' + this.options.navElContent + '</a>')
+          .addClass(this.options.navElClass)
+          .addClass('next')
+      )
+
+    this.$element.append(
+        $('<a href="javascript:">' + this.options.navElContent + '</a>')
+          .addClass(this.options.navElClass)
+          .addClass('prev')
+      )
+
+    this.$navigationEls = this.$element.find('.' + this.options.navElClass);
+  }
+
+
+  /*====================================================
+    DOM Manipulation
+    ==================================================*/
+  miniCarousel.prototype._setWrapperDimensions = function () {
     this.$panel.css('width', (this.$items.first().outerWidth()+ this.options.itemGutter) * (this.$items.length + 1));
-  }
-
-  miniCarousel.prototype._countFrames =  function () {
-    // count frames
-    this.framesCount = Math.ceil(this.$items.length / opts.visibleItems);
-  };
-
-  miniCarousel.prototype.addItems = function (items) {
-    var _self = this;
-
-    // append to panel
-    $.each(items, function (index, item) {
-      _self.$panel.append(item)
-    });
-
-    this._initItems();
-
-    this._countFrames();
-
-    this._setPanelDimension();
-  }
-
-  miniCarousel.prototype.isLast = function () {
-    return this.currentFrame == this.framesCount
   }
 
   miniCarousel.prototype._slide = function (pos) {
@@ -112,6 +115,43 @@
     });
   }
 
+
+  /*===================================================
+    Binding
+    ==================================================*/
+  miniCarousel.prototype._bindNavigationElClick = function () {
+    var _self = this;
+
+    this.$navigationEls.on('click', function () {
+      var direction = $(this).hasClass('prev') ? 'previous' : 'next';
+
+      _self[direction]();
+    });
+  }
+
+
+  /*====================================================
+    Public
+    ==================================================*/
+  // INTERNALS
+  miniCarousel.prototype.addItems = function (items) {
+    var _self = this;
+
+    // append to panel
+    $.each(items, function (index, item) {
+      _self.$panel.append(item)
+    });
+
+    this._initItems();
+
+    this._setLength();
+
+    this._setWrapperDimensions();
+
+    this._bindNavigationElClick();
+  }
+
+  // NAVIGATION
   miniCarousel.prototype.go = function (pos) {
     // if target is out of bounds return
     if (pos > this.framesCount || pos <= 0) return;
@@ -130,27 +170,44 @@
     this.go(this.currentFrame - 1);
   }
 
+  // GETTERS
   miniCarousel.prototype.whereAmI = function () {
     return this.currentFrame;
   }
 
+  miniCarousel.prototype.length = function () {
+    return this.framesCount;
+  }
+
+
+  /*====================================================
+    Util
+    ==================================================*/
+  miniCarousel.prototype._setLength =  function () {
+    // count frames
+    this.framesCount = Math.ceil(this.$items.length / opts.visibleItems);
+  };
+
+
+  /*====================================================
+    jQuery Plugin
+    ==================================================*/
   $.fn.miniCarousel = function (option, param) {
     var returnValue = null
       , param = param || null
+      , getters = ['whereAmI', 'length']
     ;
 
     this.each(function () {
       var $this   = $(this);
-      var data    = $this.data('ns.miniCarousel');
+      var data    = $this.data('data.miniCarousel');
       var options = $.extend({}, miniCarousel.defaults, $this.data(), typeof option == 'object' && option);
-      var action  = typeof option == 'string' && option[0] != '_' ? option : options._slide;
+      if (options != undefined) var action  = typeof option == 'string' && option[0] != '_' ? option : options._slide;
 
-      if (!data) $this.data('ns.miniCarousel', (data = new miniCarousel(this, options)));
-
-      //
+      if (!data) $this.data('data.miniCarousel', (data = new miniCarousel(this, options)));
 
       if (typeof option == 'number') data.go(option)
-      else if (action == 'whereAmI') returnValue = data[action]()
+      else if ($.inArray(action, getters) != -1) returnValue = data[action]()
       else if (action) param != null ? data[action](param) : data[action]()
     });
 
@@ -163,6 +220,8 @@
     // item width
     itemSelector: '.gallery'
   , itemWidth: 123
+  , navElClass: 'nav'
+  , navElContent: ''
   , itemGutter: 10
   , visibleItems: 4
   , wrapperClass: 'miniCarouselWrapper'
