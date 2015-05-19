@@ -1,10 +1,10 @@
-Mini Carousel
+Stupid Carousel
 ==============================================================
 
 @author Nigel Sirisomphone
 @date 17/10/2013
 
-Flyweight carousel plugin. This has a few simple methods that handle navigation of the carousel.
+Flyweight carousel plugin. This has a few simple methods that handle navigation of the carousel. Just messing about.
 
 *Public Methods:  e.g. $(el).miniCarousel(x);*
 - []           : simply enter destination slide
